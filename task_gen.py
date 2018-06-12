@@ -1,0 +1,266 @@
+#!/usr/bin/env python
+import csv, copy, json, string, argparse, sys, os
+
+
+
+# CONFIG = {
+#     'offsetDelta': 0,
+#     'initialScannerEvent': 'DummyFix',
+#     'events': [ 'bigface', 'matchface' ],
+#     'stimuli': 'bigface',
+#     'trial_type': 'TrialType',
+#     'response_time': True
+# }
+
+# Functions to retrieve bids tsv header values for a given frame and event in that frame
+def get_event(frame, event):
+    if frame.get(CONFIG.get('trial_type')):
+        return frame[CONFIG.get('trial_type')]
+    else:
+        return event
+
+def get_onset(frame, event):
+    onset = frame["{}.OnsetTime".format(event)]
+    return onset if event in CONFIG['events'] else 'n/a'
+
+# Should duration error be add/ subtracted from duration?
+def get_duration(frame, event):
+    duration_key = '{0}.Duration'.format(event)
+    onset_to_onset_key = '{0}.OnsetToOnsetTime'.format(event)
+
+    if duration_key in frame:
+        return frame[duration_key]
+    elif onset_to_onset_key in frame:
+        return frame[onset_to_onset_key]
+    else:
+        return 'n/a'
+
+def get_response_time(frame, event):
+    return frame.get('{0}.RT'.format(event), 'n/a')
+
+def get_correct(frame, event):
+    if frame.get('{}.RESP'.format(event)) or frame.get('{}.CRESP'.format(event)):
+        return frame['{}.RESP'.format(event)] == frame['{}.CRESP'.format(event)]
+    else:
+        return 'n/a'
+
+def get_stim_gen(stim_prop):
+    '''
+    Wrapper so that the function takes the same arguments as the other methods
+    '''
+    def get_stim(frame, event):
+        return frame.get(stim_prop, 'n/a')
+    return get_stim
+
+def get_accuracy(frame, event):
+    return frame.get('{}.ACC'.format(event), 'n/a')
+
+def get_response(frame, event):
+    return frame.get('{}.RESP'.format(event), 'n/a')
+
+def get_correct_response(frame, event):
+    return frame.get('{}.CRESP'.format(event), 'n/a')
+
+def check_for_stim():
+    '''
+    Adds stim properties to the closure dictionary and Properties list for the header
+    '''
+    if CONFIG.get('stimuli'):
+        MY_PROPS['stim_file'] = get_stim_gen(CONFIG['stimuli'])
+        MY_PROP_KEYS.append('stim_file')
+
+def extract_frames(filename):
+    '''
+    Returns the list of log frames from the .txt
+    '''
+    frames = []
+    with open(filename) as file:
+        header = {}
+        frame = -1
+        for line in file:
+            k = line.strip().split(':')
+            if not frames and len(k) > 1 and 'Level' not in k[0]:
+                header[k[0]] = string.join(k[1:], ':').strip()
+            if 'Level: ' in line:
+                frames.append(copy.deepcopy(header))
+                frame += 1
+            if len(k) > 1 and frames:
+                frames[frame][k[0]] = string.join(k[1:], ':').strip()
+    return frames
+
+def extract_frames_from_csv(filename):
+    '''
+    Returns the list of log frames from the .txt
+    '''
+    frames = []
+    with open(filename, 'rb') as file:
+        reader = csv.reader(file)
+        reader.next()
+        header = reader.next()
+        for row in reader:
+            frames.append({header[i]:row[i] for i in range(len(row)) if row[i] != ''})
+    return frames
+
+def get_initial_offset(frame, key, config):
+    result = 0
+
+    result = int(frame[key])
+
+    delta = config.get('offsetDelta', 0)
+    return result + delta
+
+def fix_time_for_single_event(frame, event, offset, timeProps):
+    '''
+    Use the offset to correct the time properties that need to be corrected
+    '''
+    for offsetTimeProp in timeProps['offset']:
+        key = '{0}.{1}'.format(event, offsetTimeProp)
+        if key in frame:
+            frame[key] = str((int(frame[key]) - offset)/1000.0)
+
+    for nonOffsetTimeProp in timeProps['nonOffset']:
+        key = '{0}.{1}'.format(event, nonOffsetTimeProp)
+        if key in frame:
+            frame[key] = str(int(frame[key])/1000.0)
+
+def raw_to_bids_runs(frames):
+    '''
+    converts the raw frames to runs of bids frames
+    '''
+    runs = []
+    runIndex = -1
+    offset = None
+    offsetTimeProps = ['OffsetTime', 'OnsetTime']+['RTTime' for i in [0] if CONFIG['response_time']]
+    nonOffsetTimeProps = ['RT', 'Duration', 'OnsetToOnsetTime']
+    timeProps = {'offset': offsetTimeProps, 'nonOffset': nonOffsetTimeProps}
+    for frame in frames:
+        presentEvents = []
+        key = '{0}.OffsetTime'.format(CONFIG.get('initialScannerEvent'))
+        if key in frame:
+            runs.append([])
+            runIndex += 1
+            presentEvents = [CONFIG.get('initialScannerEvent')]
+            offset = get_initial_offset(frame, key, CONFIG)
+            fix_time_for_single_event(frame, CONFIG.get('initialScannerEvent'), offset, timeProps)
+        elif offset:
+            presentEvents = [event for event in CONFIG['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
+            for event in presentEvents:
+                fix_time_for_single_event(frame, event, offset, timeProps)
+        for event in presentEvents:
+            bidsFrame = {}
+            for bidsKey, closure in MY_PROPS.items():
+                bidsFrame[bidsKey] = closure(frame, event)
+            runs[runIndex].append(bidsFrame)
+    return runs
+
+def to_csv(bidsFrames, outFile):
+    '''
+    Writes the bids frames to a csv
+    '''
+    print "Writing file..."
+    with open(outFile, 'wb') as csvfile:
+        writer = csv.DictWriter(csvfile, MY_PROP_KEYS, dialect=csv.excel_tab)
+        writer.writeheader()
+        for bidsFrame in bidsFrames:
+            writer.writerow(bidsFrame)
+
+def interact():
+    configFileName = raw_input("Name of config file (leave blank for config.json):\n")
+    if not configFileName:
+        configFileName = 'config.json'
+    config = {}
+    config['offsetDelta'] = int(raw_input('Please enter the offset for the start of the scan:\n'))
+    config['initialScannerEvent'] = raw_input('Please enter the initial event name:\n')
+    config['events'] = [x.strip() for x in raw_input('Please enter trial types seperated by commas(,):\n').split(',')]
+    config['stimuli'] = raw_input('Please enter the field name of the stimuli (Leave blank if not applicable):\n')
+    config['encoding'] = raw_input('Please enter the encoding of the file (utf-8/utf-16):\n')
+    if not config['stimuli']:
+        config.pop('stimuli')
+    config['response_time'] = True
+    config['trial_type'] = True
+    with open(configFileName, 'w+') as configFile:
+        json.dump(config, configFile, indent=4)
+
+
+if __name__ == '__main__':
+
+
+    # Gear basics
+    input_folder = '/flywheel/v0/input/file/'
+    output_folder = '/flywheel/v0/output/'
+    print os.listdir('/flywheel/v0/input/file/')
+    # Grab the input file path
+    input_filename = os.listdir(input_folder)[0]
+    filename = os.path.join(input_folder, input_filename)
+
+    config = '/flywheel/v0/config.json'
+
+    # ### Read in arguments
+    # parser = argparse.ArgumentParser(description='edat.txt to tsv converter')
+    # parser.add_argument('filename', nargs='?', default='', help='Input LogFile.txt to convert')
+    # parser.add_argument('-c', '--configFile', dest='config', help='Config file')
+    # parser.add_argument('-i', '--interactive-config', dest='interact', action='store_true', help='Interactively create a config file and exit')
+    # args = parser.parse_args()
+    # if args.interact:
+    #     interact()
+    #     sys.exit(0)
+    # elif not args.filename:
+    #     print "Need filename if not creating a config file."
+    #     parser.print_help()
+    #     sys.exit()
+
+    # filename = args.filename
+    # config = args.config
+
+    if config:
+        print "Reading configurations..."
+        CONFIGS = {}
+        CONFIG = {}
+        with open(config) as configFile:
+            conf = json.load(configFile)
+        print conf
+        CONFIGS = conf['inputs'].get('LogConfig', {}).get('value', {})
+        print "configs:"
+        print CONFIGS
+        ks = CONFIGS.keys()
+        for k in ks:
+            print k
+            if k in input_filename.lower():
+                CONFIG = CONFIGS[k]
+
+    print CONFIG
+
+    MY_PROP_KEYS= ['onset', 'duration', 'trial_type', 'response_time',
+                   'response', 'correct_response', 'accuracy']
+    MY_PROPS = {
+        'trial_type': get_event,
+        'onset': get_onset,
+        'duration': get_duration,
+        'response_time': get_response_time,
+        'response': get_response,
+        'correct_response': get_correct_response,
+        'accuracy': get_accuracy
+    }
+
+    if not CONFIG.get('response_time'):
+        MY_PROP_KEYS.remove('response_time')
+        MY_PROPS.pop('response_time')
+    if not CONFIG.get('trial_type'):
+        MY_PROP_KEYS.remove('trial_type')
+        MY_PROPS.pop('trial_type')
+
+    check_for_stim()
+    print "Extracting frames..."
+    rawFrames = extract_frames(filename) if filename[-4:] == '.txt' else extract_frames_from_csv(filename)
+    print rawFrames
+    print "Converting frames..."
+    bidsRuns = raw_to_bids_runs(rawFrames)
+    outFilenames = []
+    print len(bidsRuns)
+    if len(bidsRuns) > 1:
+        outFilenames = ['{}_run-{}.tsv'.format(input_filename[:-4], i) for i in range(len(bidsRuns))]
+    else:
+        outFilenames = ['{}.tsv'.format(input_filename[:-4])]
+    for i, run in enumerate(bidsRuns):
+        to_csv(run, os.path.join(output_folder, outFilenames[i]))
+        print 'Created {}'.format(os.path.join(output_folder, outFilenames[i]))
