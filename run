@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-export PATH=/opt/conda/bin:$PATH
+
+FLYWHEEL_BASE=/flywheel/v0
 
 CONFIG_FILE=$FLYWHEEL_BASE/config.json
 
-python task_gen.py
+python $FLYWHEEL_BASE/task_gen.py
 

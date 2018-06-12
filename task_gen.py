@@ -157,30 +157,11 @@ def to_csv(bidsFrames, outFile):
     '''
     Writes the bids frames to a csv
     '''
-    print "Writing file..."
     with open(outFile, 'wb') as csvfile:
         writer = csv.DictWriter(csvfile, MY_PROP_KEYS, dialect=csv.excel_tab)
         writer.writeheader()
         for bidsFrame in bidsFrames:
             writer.writerow(bidsFrame)
-
-def interact():
-    configFileName = raw_input("Name of config file (leave blank for config.json):\n")
-    if not configFileName:
-        configFileName = 'config.json'
-    config = {}
-    config['offsetDelta'] = int(raw_input('Please enter the offset for the start of the scan:\n'))
-    config['initialScannerEvent'] = raw_input('Please enter the initial event name:\n')
-    config['events'] = [x.strip() for x in raw_input('Please enter trial types seperated by commas(,):\n').split(',')]
-    config['stimuli'] = raw_input('Please enter the field name of the stimuli (Leave blank if not applicable):\n')
-    config['encoding'] = raw_input('Please enter the encoding of the file (utf-8/utf-16):\n')
-    if not config['stimuli']:
-        config.pop('stimuli')
-    config['response_time'] = True
-    config['trial_type'] = True
-    with open(configFileName, 'w+') as configFile:
-        json.dump(config, configFile, indent=4)
-
 
 if __name__ == '__main__':
 
@@ -195,40 +176,21 @@ if __name__ == '__main__':
 
     config = '/flywheel/v0/config.json'
 
-    # ### Read in arguments
-    # parser = argparse.ArgumentParser(description='edat.txt to tsv converter')
-    # parser.add_argument('filename', nargs='?', default='', help='Input LogFile.txt to convert')
-    # parser.add_argument('-c', '--configFile', dest='config', help='Config file')
-    # parser.add_argument('-i', '--interactive-config', dest='interact', action='store_true', help='Interactively create a config file and exit')
-    # args = parser.parse_args()
-    # if args.interact:
-    #     interact()
-    #     sys.exit(0)
-    # elif not args.filename:
-    #     print "Need filename if not creating a config file."
-    #     parser.print_help()
-    #     sys.exit()
-
-    # filename = args.filename
-    # config = args.config
-
     if config:
         print "Reading configurations..."
         CONFIGS = {}
         CONFIG = {}
         with open(config) as configFile:
             conf = json.load(configFile)
-        print conf
         CONFIGS = conf['inputs'].get('LogConfig', {}).get('value', {})
-        print "configs:"
-        print CONFIGS
         ks = CONFIGS.keys()
         for k in ks:
-            print k
             if k in input_filename.lower():
                 CONFIG = CONFIGS[k]
 
-    print CONFIG
+    if not CONFIG or not isinstance(CONFIG, dict):
+        print "Valid CONFIG not found for task {} in project.info.context.LogConfig".format(input_filename)
+        sys.exit(1)
 
     MY_PROP_KEYS= ['onset', 'duration', 'trial_type', 'response_time',
                    'response', 'correct_response', 'accuracy']
@@ -252,11 +214,11 @@ if __name__ == '__main__':
     check_for_stim()
     print "Extracting frames..."
     rawFrames = extract_frames(filename) if filename[-4:] == '.txt' else extract_frames_from_csv(filename)
-    print rawFrames
+
     print "Converting frames..."
     bidsRuns = raw_to_bids_runs(rawFrames)
     outFilenames = []
-    print len(bidsRuns)
+    print "Found {} runs".format(len(bidsRuns))
     if len(bidsRuns) > 1:
         outFilenames = ['{}_run-{}.tsv'.format(input_filename[:-4], i) for i in range(len(bidsRuns))]
     else:
