@@ -1,6 +1,13 @@
 #!/usr/bin/env python
-import csv, copy, json, string, argparse, sys, os
 
+import argparse
+import copy
+import csv
+import fnmatch
+import json
+import os
+import string
+import sys
 
 
 # CONFIG = {
@@ -9,15 +16,13 @@ import csv, copy, json, string, argparse, sys, os
 #     'events': [ 'bigface', 'matchface' ],
 #     'stimuli': 'bigface',
 #     'trial_type': 'TrialType',
-#     'response_time': True
+#     'response_time': True,
+#     'skip-rows': 1
 # }
 
 # Functions to retrieve bids tsv header values for a given frame and event in that frame
 def get_event(frame, event):
-    if frame.get(CONFIG.get('trial_type')):
-        return frame[CONFIG.get('trial_type')]
-    else:
-        return event
+    return frame.get(CONFIG.get('trial_type'), event)
 
 def get_onset(frame, event):
     onset = frame["{}.OnsetTime".format(event)]
@@ -88,14 +93,15 @@ def extract_frames(filename):
                 frames[frame][k[0]] = string.join(k[1:], ':').strip()
     return frames
 
-def extract_frames_from_csv(filename):
+def extract_frames_from_csv(filename, skip_rows):
     '''
     Returns the list of log frames from the .txt
     '''
     frames = []
     with open(filename, 'rb') as file:
         reader = csv.reader(file)
-        reader.next()
+        for i in range(skip_rows):
+            reader.next()
         header = reader.next()
         for row in reader:
             frames.append({header[i]:row[i] for i in range(len(row)) if row[i] != ''})
@@ -153,7 +159,7 @@ def raw_to_bids_runs(frames):
             runs[runIndex].append(bidsFrame)
     return runs
 
-def to_csv(bidsFrames, outFile):
+def to_tsv(bidsFrames, outFile):
     '''
     Writes the bids frames to a csv
     '''
@@ -185,12 +191,12 @@ if __name__ == '__main__':
         CONFIGS = conf['inputs'].get('LogConfig', {}).get('value', {})
         ks = CONFIGS.keys()
         for k in ks:
-            if k in input_filename.lower():
+            if fnmatch.fnmatch(input_filename, "*{}*".format(k)):
                 CONFIG = CONFIGS[k]
 
     if not CONFIG or not isinstance(CONFIG, dict):
         print "Valid CONFIG not found for task {} in project.info.context.LogConfig".format(input_filename)
-        sys.exit(1)
+        sys.exit(17)
 
     MY_PROP_KEYS= ['onset', 'duration', 'trial_type', 'response_time',
                    'response', 'correct_response', 'accuracy']
@@ -213,7 +219,7 @@ if __name__ == '__main__':
 
     check_for_stim()
     print "Extracting frames..."
-    rawFrames = extract_frames(filename) if filename[-4:] == '.txt' else extract_frames_from_csv(filename)
+    rawFrames = extract_frames(filename) if filename[-4:] == '.txt' else extract_frames_from_csv(filename, CONFIG.get('skip-rows', 0))
 
     print "Converting frames..."
     bidsRuns = raw_to_bids_runs(rawFrames)
