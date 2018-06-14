@@ -98,23 +98,23 @@ class TaskGenTestCases(unittest.TestCase):
 
     def test_extract_frames(self):
         # Test getting raw frames from log text file
-        frames = task_gen.extract_frames("tests/Valid.txt")
+        frames = task_gen.extract_frames("logfiles/Valid.txt")
         self.assertEqual(len(frames), 4)
         self.assertTrue(frames[0].get('Image'), False)
 
     def test_invalid_text_logfile(self):
-        frames = task_gen.extract_frames("tests/Invalid.txt")
+        frames = task_gen.extract_frames("logfiles/Invalid.txt")
         self.assertEqual(len(frames), 0)
 
     def test_extract_frames_from_csv(self):
         # Test getting raw frames from csv log file
-        frames = task_gen.extract_frames_from_csv("tests/Valid.csv", 0)
+        frames = task_gen.extract_frames_from_csv("logfiles/Valid.csv", 0)
         self.assertEqual(len(frames), 1)
         self.assertTrue(frames[0].get('tooslow'), False)
 
     def test_invalid_csv_logfile(self):
         # Test a file without any proper frames
-        frames = task_gen.extract_frames_from_csv("tests/Invalid.csv", 0)
+        frames = task_gen.extract_frames_from_csv("logfiles/Invalid.csv", 0)
         self.assertEqual(len(frames), 0)
 
     def test_get_initial_offset(self):
