@@ -1,0 +1,101 @@
+*** Header Start ***
+VersionPersist: 1
+LevelName: Session
+LevelName: Block
+LevelName: Trial
+LevelName: SubTrial
+LevelName: LogLevel5
+LevelName: LogLevel6
+LevelName: LogLevel7
+LevelName: LogLevel8
+LevelName: LogLevel9
+LevelName: LogLevel10
+Experiment: Pokenogo_jitter
+SessionDate: 02-11-2018
+SessionTime: 15:30:43
+SessionStartDateTimeUtc: 2/11/2018 8:30:43 PM
+Subject: 065
+Session: 1
+DataFile.Basename: Pokenogo_jitter-065-1
+RandomSeed: -1018970304
+Group: 1
+Display.RefreshRate: 60.318
+*** Header End ***
+		Level: 3
+		*** LogFrame Start ***
+		Procedure: FixateProc
+		Run1EventList: 1
+		Image: pokemon/pokeball.bmp
+		trigger: ?
+		Running: Run1EventList
+		Run1EventList.Cycle: 2
+		Run1EventList.Sample: 1
+		InitFix.OnsetDelay: 9
+		InitFix.OnsetTime: 38345
+		InitFix.DurationError: -9
+		InitFix.OffsetTime: 51336
+		InitFix.RTTime: 0
+		InitFix.ACC: 0
+		InitFix.RT: 0
+		InitFix.RESP:
+		InitFix.CRESP:
+		InitFix.OnsetToOnsetTime: 0
+		*** LogFrame End ***
+		Level: 3
+		*** LogFrame Start ***
+		Procedure: GoProc
+		Run1EventList: 2
+		Image: pokemon/charizard.bmp
+		trigger: 2353.3
+		Running: Run1EventList
+		Run1EventList.Cycle: 2
+		Run1EventList.Sample: 2
+		GoImage.OnsetDelay: 7
+		GoImage.OnsetTime: 51343
+		GoImage.DurationError: 0
+		GoImage.OffsetTime: 51343
+		GoImage.RTTime: 0
+		GoImage.ACC: 0
+		GoImage.RT: 0
+		GoImage.RESP:
+		GoImage.CRESP: 1
+		GoImage.OnsetToOnsetTime: 497
+		Fixcross.OnsetDelay: 4
+		Fixcross.OnsetTime: 51840
+		Fixcross.DurationError: -4
+		Fixcross.OffsetTime: 54189
+		Fixcross.OffsetDelay: 0
+		Fixcross.RTTime: 0
+		Fixcross.ACC: 0
+		Fixcross.RT: 0
+		Fixcross.RESP:
+		Fixcross.CRESP:
+		Fixcross.OnsetToOnsetTime: 0
+		*** LogFrame End ***
+	Level: 2
+	*** LogFrame Start ***
+	BlockList: 2
+	Procedure: GNGBlock2Proc
+	BlockList.Cycle: 1
+	BlockList.Sample: 2
+	Running: BlockList
+	*** LogFrame End ***
+Level: 1
+*** LogFrame Start ***
+Experiment: Pokenogo_jitter
+SessionDate: 02-11-2018
+SessionTime: 15:30:43
+SessionStartDateTimeUtc: 2/11/2018 8:30:43 PM
+Subject: 065
+Session: 1
+DataFile.Basename: Pokenogo_jitter-065-1
+RandomSeed: -1018970304
+Group: 1
+Display.RefreshRate: 60.318
+Clock.Information: <?xml version="1.0"?>\n<Clock xmlns:dt="urn:schemas-microsoft-com:datatypes"><Description dt:dt="string">E-Prime Primary Realtime Clock</Description><StartTime><Timestamp dt:dt="int">0</Timestamp><DateUtc dt:dt="string">2018-02-11T20:30:43Z</DateUtc></StartTime><FrequencyChanges><FrequencyChange><Frequency dt:dt="r8">2826787</Frequency><Timestamp dt:dt="r8">7570606857</Timestamp><Current dt:dt="r8">0</Current><DateUtc dt:dt="string">2018-02-11T20:30:43Z</DateUtc></FrequencyChange></FrequencyChanges></Clock>\n
+StudioVersion: 2.0.10.248
+RuntimeVersion: 2.0.10.353
+RuntimeVersionExpected: 2.0.10.353
+RuntimeCapabilities: Professional
+ExperimentVersion: 1.0.0.53
+*** LogFrame End ***

@@ -20,6 +20,8 @@ import sys
 #     'skip-rows': 1
 # }
 
+CONFIG = {}
+
 # Functions to retrieve bids tsv header values for a given frame and event in that frame
 def get_event(frame, event):
     return frame.get(CONFIG.get('trial_type'), event)
@@ -91,6 +93,8 @@ def extract_frames(filename):
                 frame += 1
             if len(k) > 1 and frames:
                 frames[frame][k[0]] = string.join(k[1:], ':').strip()
+    if len(frames) < 1:
+        print "No log frames found, please make sure a valid log file was given."
     return frames
 
 def extract_frames_from_csv(filename, skip_rows):
@@ -104,6 +108,9 @@ def extract_frames_from_csv(filename, skip_rows):
             reader.next()
         header = reader.next()
         for row in reader:
+            if len(row) > len(header):
+                print "Row is longer than header."
+                return []
             frames.append({header[i]:row[i] for i in range(len(row)) if row[i] != ''})
     return frames
 
@@ -185,7 +192,6 @@ if __name__ == '__main__':
     if config:
         print "Reading configurations..."
         CONFIGS = {}
-        CONFIG = {}
         with open(config) as configFile:
             conf = json.load(configFile)
         CONFIGS = conf['inputs'].get('LogConfig', {}).get('value', {})
