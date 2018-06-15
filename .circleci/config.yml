@@ -44,7 +44,7 @@ jobs:
                 )
               fi
               if [ "$CIRCLE_BRANCH" == "master" ]; then
-                docker tag bids-client flywheel/task-tsv-converter:latest
+                docker tag task-tsv-converter flywheel/task-tsv-converter:latest
                 docker push flywheel/task-tsv-converter:latest
               fi
             fi
