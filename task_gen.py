@@ -236,5 +236,5 @@ if __name__ == '__main__':
     else:
         outFilenames = ['{}.tsv'.format(input_filename[:-4])]
     for i, run in enumerate(bidsRuns):
-        to_csv(run, os.path.join(output_folder, outFilenames[i]))
+        to_tsv(run, os.path.join(output_folder, outFilenames[i]))
         print 'Created {}'.format(os.path.join(output_folder, outFilenames[i]))
