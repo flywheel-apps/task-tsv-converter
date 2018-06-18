@@ -17,28 +17,51 @@ import sys
 #     'stimuli': 'bigface',
 #     'trial_type': 'TrialType',
 #     'response_time': True,
-#     'skip-rows': 1
+#     'skip-rows': 1,
+#     'accuracy': '{event}.ACC',
+#     'onset': '{event}.OnsetTime',
+#     'offset': '{event}.OffsetTime'
 # }
 
 CONFIG = {}
 
 # Functions to retrieve bids tsv header values for a given frame and event in that frame
-def get_event(frame, event):
-    return frame.get(CONFIG.get('trial_type'), event)
 
-def get_onset(frame, event):
-    onset = frame["{}.OnsetTime".format(event)]
-    return onset if event in CONFIG['events'] else 'n/a'
+def get_item_fn(item, default):
+    '''
+    Wrapper to quickly make configurable functions to get bids header values
+    '''
+    def get_item(frame, event):
+        if not CONFIG.get(item):
+            return frame.get(default.format(event), 'n/a')
+        elif event in CONFIG[item]:
+            return frame.get(CONFIG[item].replace('{event}', '{}').format(event), 'n/a')
+        else:
+            return frame.get(CONFIG[item], 'n/a')
+    return get_item
+
+get_event = get_item_fn('trial_type', 'TrialType')
+get_onset = get_item_fn('onset', '{}.OnsetTime')
+get_accuracy = get_item_fn('accuracy', '{}.ACC')
+get_response = get_item_fn('response', '{}.RESP')
+get_correct_response = get_item_fn('correct', '{}.CRESP')
 
 # Should duration error be add/ subtracted from duration?
 def get_duration(frame, event):
     duration_key = '{0}.Duration'.format(event)
     onset_to_onset_key = '{0}.OnsetToOnsetTime'.format(event)
+    onset = get_onset(frame, event)
+    offset = get_item_fn('offset', '{}.OffsetTime')(frame, event)
 
     if duration_key in frame:
         return frame[duration_key]
     elif onset_to_onset_key in frame:
         return frame[onset_to_onset_key]
+    elif onset and offset:
+        try:
+            return str(float(offset) - float(onset))
+        except ValueError:
+            return 'n/a'
     else:
         return 'n/a'
 
@@ -46,8 +69,10 @@ def get_response_time(frame, event):
     return frame.get('{0}.RT'.format(event), 'n/a')
 
 def get_correct(frame, event):
-    if frame.get('{}.RESP'.format(event)) or frame.get('{}.CRESP'.format(event)):
-        return frame['{}.RESP'.format(event)] == frame['{}.CRESP'.format(event)]
+    resp = get_response(frame, event)
+    cresp = get_correct_response(frame, event)
+    if resp != 'n/a' and cresp != 'n/a':
+        return resp == cresp
     else:
         return 'n/a'
 
@@ -58,15 +83,6 @@ def get_stim_gen(stim_prop):
     def get_stim(frame, event):
         return frame.get(stim_prop, 'n/a')
     return get_stim
-
-def get_accuracy(frame, event):
-    return frame.get('{}.ACC'.format(event), 'n/a')
-
-def get_response(frame, event):
-    return frame.get('{}.RESP'.format(event), 'n/a')
-
-def get_correct_response(frame, event):
-    return frame.get('{}.CRESP'.format(event), 'n/a')
 
 def check_for_stim():
     '''
@@ -143,19 +159,23 @@ def raw_to_bids_runs(frames):
     runs = []
     runIndex = -1
     offset = None
-    offsetTimeProps = ['OffsetTime', 'OnsetTime']+['RTTime' for i in [0] if CONFIG['response_time']]
+    offsetTimeProps = ['OffsetTime', 'OnsetTime']+['RTTime' for i in [0] if CONFIG.get('response_time')]
     nonOffsetTimeProps = ['RT', 'Duration', 'OnsetToOnsetTime']
     timeProps = {'offset': offsetTimeProps, 'nonOffset': nonOffsetTimeProps}
     for frame in frames:
         presentEvents = []
         key = '{0}.OffsetTime'.format(CONFIG.get('initialScannerEvent'))
-        if key in frame:
+        if key in frame or (not CONFIG.get('initialScannerEvent') and offset is None):
             runs.append([])
             runIndex += 1
-            presentEvents = [CONFIG.get('initialScannerEvent')]
-            offset = get_initial_offset(frame, key, CONFIG)
-            fix_time_for_single_event(frame, CONFIG.get('initialScannerEvent'), offset, timeProps)
-        elif offset:
+            if CONFIG.get('initialScannerEvent'):
+                presentEvents = [CONFIG.get('initialScannerEvent')]
+                offset = get_initial_offset(frame, key, CONFIG)
+                fix_time_for_single_event(frame, CONFIG.get('initialScannerEvent'), offset, timeProps)
+            else:
+                presentEvents = [event for event in CONFIG['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
+                offset = 0
+        elif offset is not None:
             presentEvents = [event for event in CONFIG['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
             for event in presentEvents:
                 fix_time_for_single_event(frame, event, offset, timeProps)
@@ -188,7 +208,7 @@ if __name__ == '__main__':
     filename = os.path.join(input_folder, input_filename)
 
     config = '/flywheel/v0/config.json'
-
+    conf = None
     if config:
         print "Reading configurations..."
         CONFIGS = {}
@@ -230,11 +250,14 @@ if __name__ == '__main__':
     print "Converting frames..."
     bidsRuns = raw_to_bids_runs(rawFrames)
     outFilenames = []
+    outfilebasename = input_filename
     print "Found {} runs".format(len(bidsRuns))
+    if conf.get('config', {}).get('FileName'):
+        outfilebasename = conf.get('config', {}).get('FileName')
     if len(bidsRuns) > 1:
-        outFilenames = ['{}_run-{}.tsv'.format(input_filename[:-4], i) for i in range(len(bidsRuns))]
+        outFilenames = ['{}_run-{}.tsv'.format(outfilebasename[:-4], i) for i in range(len(bidsRuns))]
     else:
-        outFilenames = ['{}.tsv'.format(input_filename[:-4])]
+        outFilenames = ['{}.tsv'.format(outfilebasename[:-4])]
     for i, run in enumerate(bidsRuns):
         to_tsv(run, os.path.join(output_folder, outFilenames[i]))
         print 'Created {}'.format(os.path.join(output_folder, outFilenames[i]))

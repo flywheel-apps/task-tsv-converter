@@ -2,8 +2,8 @@
 	"name": "task-tsv-converter",
 	"label": "Task tsv Converter",
 	"description": "Converts log files to tsv task files as per bids specs",
-	"version": "0.1.0",
-	"flywheel": "0.1.0",
+	"version": "0.1.2",
+	"flywheel": "0.1.2",
 	"inputs": {
 		"file": {
 			"base": "file",
@@ -22,7 +22,7 @@
 	"config": {
 		"FileName": {
 			"default": "",
-			"description": "Override tsv filename from {filename}[_run-#].tsv",
+			"description": "Override tsv filename from {filename}[_run-#].tsv, please include ext",
 			"type": "string"
 		}
 	},
@@ -33,6 +33,9 @@
 	"source": "",
 	"url": "",
 	"custom": {
-		"docker-image": "flywheel/task-tsv-converter"
+		"docker-image": "flywheel/task-tsv-converter:0.1.2",
+		"gear-builder": {
+			"image":"flywheel/task-tsv-converter:0.1.2"
+		}
 	}
 }
