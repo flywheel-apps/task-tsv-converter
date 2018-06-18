@@ -208,17 +208,15 @@ if __name__ == '__main__':
     filename = os.path.join(input_folder, input_filename)
 
     config = '/flywheel/v0/config.json'
-    conf = None
-    if config:
-        print "Reading configurations..."
-        CONFIGS = {}
-        with open(config) as configFile:
-            conf = json.load(configFile)
-        CONFIGS = conf['inputs'].get('LogConfig', {}).get('value', {})
-        ks = CONFIGS.keys()
-        for k in ks:
-            if fnmatch.fnmatch(input_filename, "*{}*".format(k)):
-                CONFIG = CONFIGS[k]
+    print "Reading configurations..."
+    CONFIGS = {}
+    with open(config) as configFile:
+        conf = json.load(configFile)
+    CONFIGS = conf['inputs'].get('LogConfig', {}).get('value', {})
+    ks = CONFIGS.keys()
+    for k in ks:
+        if fnmatch.fnmatch(input_filename, "*{}*".format(k)):
+            CONFIG = CONFIGS[k]
 
     if not CONFIG or not isinstance(CONFIG, dict):
         print "Valid CONFIG not found for task {} in project.info.context.LogConfig".format(input_filename)
