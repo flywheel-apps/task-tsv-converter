@@ -21,7 +21,7 @@
 	},
 	"config": {
 		"FileName": {
-			"default": "",
+			"default": false,
 			"description": "Override tsv filename from {filename}[_run-#].tsv, please include ext",
 			"type": "string"
 		}
