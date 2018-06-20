@@ -20,7 +20,7 @@ import sys
 #     'skip-rows': 1,
 #     'accuracy': '{event}.ACC',
 #     'onset': '{event}.OnsetTime',
-#     'offset': '{event}.OffsetTime',
+#     'next_onset': '{Extraevent}.OnsetTime', ie Fix event in Pokemon
 #     'csv_null_values': ['', 'NULL'],
 #     'null_output': 'n/a'
 # }
@@ -53,15 +53,15 @@ def get_duration(frame, event):
     duration_key = '{0}.Duration'.format(event)
     onset_to_onset_key = '{0}.OnsetToOnsetTime'.format(event)
     onset = get_onset(frame, event)
-    offset = get_item_fn('offset', '{}.OffsetTime')(frame, event)
+    next_onset = get_item_fn('next_onset', '')(frame, event)
 
     if duration_key in frame:
         return frame[duration_key]
     elif onset_to_onset_key in frame:
         return frame[onset_to_onset_key]
-    elif onset and offset:
+    elif onset and next_onset:
         try:
-            return str(float(offset) - float(onset))
+            return str(float(next_onset) - float(onset))
         except ValueError:
             return CONFIG.get('null_output', 'n/a')
     else:
