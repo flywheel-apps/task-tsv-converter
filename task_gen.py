@@ -245,7 +245,7 @@ if __name__ == '__main__':
 
     check_for_stim()
     print "Extracting frames..."
-    if filename[-4:] == '.txt':
+    if filename[-4:].lower() == '.txt':
         rawFrames = extract_frames(filename)
     else:
         rawFrames = extract_frames_from_csv(filename, CONFIG.get('skip-rows', 0), CONFIG.get('csv_null_values', ['', 'NULL']))
