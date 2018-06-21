@@ -20,7 +20,9 @@ import sys
 #     'skip-rows': 1,
 #     'accuracy': '{event}.ACC',
 #     'onset': '{event}.OnsetTime',
-#     'offset': '{event}.OffsetTime'
+#     'next_onset': '{Extraevent}.OnsetTime', ie Fix event in Pokemon
+#     'csv_null_values': ['', 'NULL'],
+#     'null_output': 'n/a'
 # }
 
 CONFIG = {}
@@ -33,11 +35,11 @@ def get_item_fn(item, default):
     '''
     def get_item(frame, event):
         if not CONFIG.get(item):
-            return frame.get(default.format(event), 'n/a')
+            return frame.get(default.format(event), CONFIG.get('null_output', 'n/a'))
         elif event in CONFIG[item]:
-            return frame.get(CONFIG[item].replace('{event}', '{}').format(event), 'n/a')
+            return frame.get(CONFIG[item].replace('{event}', '{}').format(event), CONFIG.get('null_output', 'n/a'))
         else:
-            return frame.get(CONFIG[item], 'n/a')
+            return frame.get(CONFIG[item], CONFIG.get('null_output', 'n/a'))
     return get_item
 
 get_event = get_item_fn('trial_type', 'TrialType')
@@ -51,37 +53,37 @@ def get_duration(frame, event):
     duration_key = '{0}.Duration'.format(event)
     onset_to_onset_key = '{0}.OnsetToOnsetTime'.format(event)
     onset = get_onset(frame, event)
-    offset = get_item_fn('offset', '{}.OffsetTime')(frame, event)
+    next_onset = get_item_fn('next_onset', '')(frame, event)
 
     if duration_key in frame:
         return frame[duration_key]
     elif onset_to_onset_key in frame:
         return frame[onset_to_onset_key]
-    elif onset and offset:
+    elif onset and next_onset:
         try:
-            return str(float(offset) - float(onset))
+            return str(float(next_onset) - float(onset))
         except ValueError:
-            return 'n/a'
+            return CONFIG.get('null_output', 'n/a')
     else:
-        return 'n/a'
+        return CONFIG.get('null_output', 'n/a')
 
 def get_response_time(frame, event):
-    return frame.get('{0}.RT'.format(event), 'n/a')
+    return frame.get('{0}.RT'.format(event), CONFIG.get('null_output', 'n/a'))
 
 def get_correct(frame, event):
     resp = get_response(frame, event)
     cresp = get_correct_response(frame, event)
-    if resp != 'n/a' and cresp != 'n/a':
+    if resp != CONFIG.get('null_output', 'n/a') and cresp != CONFIG.get('null_output', 'n/a'):
         return resp == cresp
     else:
-        return 'n/a'
+        return CONFIG.get('null_output', 'n/a')
 
 def get_stim_gen(stim_prop):
     '''
     Wrapper so that the function takes the same arguments as the other methods
     '''
     def get_stim(frame, event):
-        return frame.get(stim_prop, 'n/a')
+        return frame.get(stim_prop, CONFIG.get('null_output', 'n/a'))
     return get_stim
 
 def check_for_stim():
@@ -113,7 +115,7 @@ def extract_frames(filename):
         print "No log frames found, please make sure a valid log file was given."
     return frames
 
-def extract_frames_from_csv(filename, skip_rows):
+def extract_frames_from_csv(filename, skip_rows, null_vals):
     '''
     Returns the list of log frames from the .txt
     '''
@@ -127,7 +129,7 @@ def extract_frames_from_csv(filename, skip_rows):
             if len(row) > len(header):
                 print "Row is longer than header."
                 return []
-            frames.append({header[i]:row[i] for i in range(len(row)) if row[i] != ''})
+            frames.append({header[i]:row[i] for i in range(len(row)) if row[i] not in null_vals})
     return frames
 
 def get_initial_offset(frame, key, config):
@@ -243,7 +245,10 @@ if __name__ == '__main__':
 
     check_for_stim()
     print "Extracting frames..."
-    rawFrames = extract_frames(filename) if filename[-4:] == '.txt' else extract_frames_from_csv(filename, CONFIG.get('skip-rows', 0))
+    if filename[-4:].lower() == '.txt':
+        rawFrames = extract_frames(filename)
+    else:
+        rawFrames = extract_frames_from_csv(filename, CONFIG.get('skip-rows', 0), CONFIG.get('csv_null_values', ['', 'NULL']))
 
     print "Converting frames..."
     bidsRuns = raw_to_bids_runs(rawFrames)

@@ -90,11 +90,12 @@ class TaskGenTestCases(unittest.TestCase):
                 "NogoImage"
             ],
             "response_time": True,
-            "encoding": "utf-16"
+            "encoding": "utf-16",
+            "next_onset": "Fixcross.OnsetTime"
         }
 
     def tearDown(self):
-        pass
+        task_gen.CONFIG = {}
 
     def test_extract_frames(self):
         # Test getting raw frames from log text file
@@ -108,13 +109,13 @@ class TaskGenTestCases(unittest.TestCase):
 
     def test_extract_frames_from_csv(self):
         # Test getting raw frames from csv log file
-        frames = task_gen.extract_frames_from_csv("logfiles/Valid.csv", 0)
+        frames = task_gen.extract_frames_from_csv("logfiles/Valid.csv", 0, ['', 'NULL'])
         self.assertEqual(len(frames), 1)
         self.assertTrue(frames[0].get('tooslow'), False)
 
     def test_invalid_csv_logfile(self):
         # Test a file without any proper frames
-        frames = task_gen.extract_frames_from_csv("logfiles/Invalid.csv", 0)
+        frames = task_gen.extract_frames_from_csv("logfiles/Invalid.csv", 0, ['', 'NULL'])
         self.assertEqual(len(frames), 0)
 
     def test_get_initial_offset(self):
@@ -155,6 +156,34 @@ class TaskGenTestCases(unittest.TestCase):
                 elif p in timeProps['nonOffset']:
                     preFix = self.event_frame.get('{}.{}'.format(e,p))
                     self.assertEqual(item, preFix)
+
+    def test_get_event(self):
+        frame = copy.deepcopy(self.event_frame)
+        CONFIG = copy.deepcopy(self.config)
+        task_gen.CONFIG = CONFIG
+        trial_type = task_gen.get_event(frame, 'GoImage')
+
+        self.assertEqual(trial_type, 'GoProc')
+
+    def test_get_duration(self):
+        frame = copy.deepcopy(self.event_frame)
+        frame['GoImage.Duration'] = '497'
+        CONFIG = copy.deepcopy(self.config)
+        task_gen.CONFIG = CONFIG
+        Duration = task_gen.get_duration(frame, 'GoImage')
+
+        self.assertEqual(Duration, '497')
+
+        frame.pop('GoImage.Duration')
+        OnsetToOnsetTime = task_gen.get_duration(frame, 'GoImage')
+
+        self.assertEqual(OnsetToOnsetTime, '497')
+
+        frame.pop('GoImage.OnsetToOnsetTime')
+        OnsetToNextOnsetTime = task_gen.get_duration(frame, 'GoImage')
+
+        # Because there's subtraction involved, it returns a float
+        self.assertEqual(OnsetToNextOnsetTime, '497.0')
 
 
 if __name__ == "__main__":
