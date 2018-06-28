@@ -8,7 +8,7 @@ Schema is as follows:
 ```
 "context" : {
 	"LogConfig": {
-		"Event_1_Name" : {
+		"Task_1_Name" : {
 			"initialScannerEvent": {
 				"type": "string",
 				"description": "The name of the event that begins a run"
@@ -65,7 +65,7 @@ Schema is as follows:
 				"default": 0
 			}
 		},
-		"Event_2":{...}
+		"Task_2":{...}
 	}
 }
 ```
