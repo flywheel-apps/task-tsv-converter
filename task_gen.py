@@ -10,7 +10,7 @@ import string
 import sys
 
 
-# CONFIG = {
+# config = {
 #     'offsetDelta': 0,
 #     'initialScannerEvent': 'DummyFix',
 #     'events': [ 'bigface', 'matchface' ],
@@ -22,10 +22,11 @@ import sys
 #     'onset': '{event}.OnsetTime',
 #     'next_onset': '{Extraevent}.OnsetTime', ie Fix event in Pokemon
 #     'csv_null_values': ['', 'NULL'],
-#     'null_output': 'n/a'
+#     'null_output': 'n/a',
+#     'start_run': 0,
 # }
 
-CONFIG = {}
+config = {}
 
 # Functions to retrieve bids tsv header values for a given frame and event in that frame
 
@@ -34,12 +35,12 @@ def get_item_fn(item, default):
     Wrapper to quickly make configurable functions to get bids header values
     '''
     def get_item(frame, event):
-        if not CONFIG.get(item):
-            return frame.get(default.format(event), CONFIG.get('null_output', 'n/a'))
-        elif event in CONFIG[item]:
-            return frame.get(CONFIG[item].replace('{event}', '{}').format(event), CONFIG.get('null_output', 'n/a'))
+        if not config.get(item):
+            return frame.get(default.format(event), config.get('null_output', 'n/a'))
+        elif event in config[item]:
+            return frame.get(config[item].replace('{event}', '{}').format(event), config.get('null_output', 'n/a'))
         else:
-            return frame.get(CONFIG[item], CONFIG.get('null_output', 'n/a'))
+            return frame.get(config[item], config.get('null_output', 'n/a'))
     return get_item
 
 get_event = get_item_fn('trial_type', 'TrialType')
@@ -63,35 +64,35 @@ def get_duration(frame, event):
         try:
             return str(float(next_onset) - float(onset))
         except ValueError:
-            return CONFIG.get('null_output', 'n/a')
+            return config.get('null_output', 'n/a')
     else:
-        return CONFIG.get('null_output', 'n/a')
+        return config.get('null_output', 'n/a')
 
 def get_response_time(frame, event):
-    return frame.get('{0}.RT'.format(event), CONFIG.get('null_output', 'n/a'))
+    return frame.get('{0}.RT'.format(event), config.get('null_output', 'n/a'))
 
 def get_correct(frame, event):
     resp = get_response(frame, event)
     cresp = get_correct_response(frame, event)
-    if resp != CONFIG.get('null_output', 'n/a') and cresp != CONFIG.get('null_output', 'n/a'):
+    if resp != config.get('null_output', 'n/a') and cresp != config.get('null_output', 'n/a'):
         return resp == cresp
     else:
-        return CONFIG.get('null_output', 'n/a')
+        return config.get('null_output', 'n/a')
 
 def get_stim_gen(stim_prop):
     '''
     Wrapper so that the function takes the same arguments as the other methods
     '''
     def get_stim(frame, event):
-        return frame.get(stim_prop, CONFIG.get('null_output', 'n/a'))
+        return frame.get(stim_prop, config.get('null_output', 'n/a'))
     return get_stim
 
 def check_for_stim():
     '''
     Adds stim properties to the closure dictionary and Properties list for the header
     '''
-    if CONFIG.get('stimuli'):
-        MY_PROPS['stim_file'] = get_stim_gen(CONFIG['stimuli'])
+    if config.get('stimuli'):
+        MY_PROPS['stim_file'] = get_stim_gen(config['stimuli'])
         MY_PROP_KEYS.append('stim_file')
 
 def extract_frames(filename):
@@ -140,17 +141,17 @@ def get_initial_offset(frame, key, config):
     delta = config.get('offsetDelta', 0)
     return result + delta
 
-def fix_time_for_single_event(frame, event, offset, timeProps):
+def fix_time_for_single_event(frame, event, offset, time_props):
     '''
     Use the offset to correct the time properties that need to be corrected
     '''
-    for offsetTimeProp in timeProps['offset']:
-        key = '{0}.{1}'.format(event, offsetTimeProp)
+    for offset_time_prop in time_props['offset']:
+        key = '{0}.{1}'.format(event, offset_time_prop)
         if key in frame:
             frame[key] = str((int(frame[key]) - offset)/1000.0)
 
-    for nonOffsetTimeProp in timeProps['nonOffset']:
-        key = '{0}.{1}'.format(event, nonOffsetTimeProp)
+    for non_offset_time_prop in time_props['nonOffset']:
+        key = '{0}.{1}'.format(event, non_offset_time_prop)
         if key in frame:
             frame[key] = str(int(frame[key])/1000.0)
 
@@ -159,44 +160,56 @@ def raw_to_bids_runs(frames):
     converts the raw frames to runs of bids frames
     '''
     runs = []
-    runIndex = -1
+    run_index = -1
     offset = None
-    offsetTimeProps = ['OffsetTime', 'OnsetTime']+['RTTime' for i in [0] if CONFIG.get('response_time')]
-    nonOffsetTimeProps = ['RT', 'Duration', 'OnsetToOnsetTime']
-    timeProps = {'offset': offsetTimeProps, 'nonOffset': nonOffsetTimeProps}
+    offset_time_props = ['OffsetTime', 'OnsetTime']+['RTTime' for i in [0] if config.get('response_time')]
+    non_offset_time_props = ['RT', 'Duration', 'OnsetToOnsetTime']
+    time_props = {'offset': offset_time_props, 'nonOffset': non_offset_time_props}
     for frame in frames:
-        presentEvents = []
-        key = '{0}.OffsetTime'.format(CONFIG.get('initialScannerEvent'))
-        if key in frame or (not CONFIG.get('initialScannerEvent') and offset is None):
+        present_events = []
+        key = '{0}.OffsetTime'.format(config.get('initialScannerEvent'))
+        if key in frame or (not config.get('initialScannerEvent') and offset is None):
             runs.append([])
-            runIndex += 1
-            if CONFIG.get('initialScannerEvent'):
-                presentEvents = [CONFIG.get('initialScannerEvent')]
-                offset = get_initial_offset(frame, key, CONFIG)
-                fix_time_for_single_event(frame, CONFIG.get('initialScannerEvent'), offset, timeProps)
+            run_index += 1
+            if config.get('initialScannerEvent'):
+                present_events = [config.get('initialScannerEvent')]
+                offset = get_initial_offset(frame, key, config)
+                fix_time_for_single_event(frame, config.get('initialScannerEvent'), offset, time_props)
             else:
-                presentEvents = [event for event in CONFIG['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
+                present_events = [event for event in config['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
                 offset = 0
         elif offset is not None:
-            presentEvents = [event for event in CONFIG['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
-            for event in presentEvents:
-                fix_time_for_single_event(frame, event, offset, timeProps)
-        for event in presentEvents:
-            bidsFrame = {}
-            for bidsKey, closure in MY_PROPS.items():
-                bidsFrame[bidsKey] = closure(frame, event)
-            runs[runIndex].append(bidsFrame)
+            present_events = [event for event in config['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
+            for event in present_events:
+                fix_time_for_single_event(frame, event, offset, time_props)
+        for event in present_events:
+            bids_frame = {}
+            for bids_key, closure in MY_PROPS.items():
+                bids_frame[bids_key] = closure(frame, event)
+            runs[run_index].append(bids_frame)
     return runs
 
-def to_tsv(bidsFrames, outFile):
+def to_tsv(bids_frames, out_file):
     '''
     Writes the bids frames to a csv
     '''
-    with open(outFile, 'wb') as csvfile:
+    with open(out_file, 'wb') as csvfile:
         writer = csv.DictWriter(csvfile, MY_PROP_KEYS, dialect=csv.excel_tab)
         writer.writeheader()
-        for bidsFrame in bidsFrames:
-            writer.writerow(bidsFrame)
+        for bids_frame in bids_frames:
+            writer.writerow(bids_frame)
+
+def get_output_filenames(input_filename, number_of_bids_runs, custom_filename=None):
+    output_filenames = []
+    output_file_basename = input_filename
+    if custom_filename:
+        output_file_basename = custom_filename
+    if number_of_bids_runs > 1:
+        first_run = config.get('start_run', 0)
+        output_filenames = ['{}_run-{}.tsv'.format(output_file_basename[:-4], i) for i in range(first_run, first_run+number_of_bids_runs)]
+    else:
+        output_filenames = ['{}.tsv'.format(output_file_basename[:-4])]
+    return output_filenames
 
 if __name__ == '__main__':
 
@@ -209,19 +222,19 @@ if __name__ == '__main__':
     input_filename = os.listdir(input_folder)[0]
     filename = os.path.join(input_folder, input_filename)
 
-    config = '/flywheel/v0/config.json'
+    CONFIG_PATH = '/flywheel/v0/config.json'
     print "Reading configurations..."
-    CONFIGS = {}
-    with open(config) as configFile:
-        conf = json.load(configFile)
-    CONFIGS = conf['inputs'].get('LogConfig', {}).get('value', {})
-    ks = CONFIGS.keys()
+    configs = {}
+    with open(CONFIG_PATH) as config_file:
+        job_config = json.load(config_file)
+    configs = job_config['inputs'].get('LogConfig', {}).get('value', {})
+    ks = configs.keys()
     for k in ks:
         if fnmatch.fnmatch(input_filename, "*{}*".format(k)):
-            CONFIG = CONFIGS[k]
+            config = configs[k]
 
-    if not CONFIG or not isinstance(CONFIG, dict):
-        print "Valid CONFIG not found for task {} in project.info.context.LogConfig".format(input_filename)
+    if not config or not isinstance(config, dict):
+        print "Valid config not found for task {} in project.info.context.LogConfig".format(input_filename)
         sys.exit(17)
 
     MY_PROP_KEYS= ['onset', 'duration', 'trial_type', 'response_time',
@@ -236,31 +249,26 @@ if __name__ == '__main__':
         'accuracy': get_accuracy
     }
 
-    if not CONFIG.get('response_time'):
+    if not config.get('response_time'):
         MY_PROP_KEYS.remove('response_time')
         MY_PROPS.pop('response_time')
-    if not CONFIG.get('trial_type'):
+    if not config.get('trial_type'):
         MY_PROP_KEYS.remove('trial_type')
         MY_PROPS.pop('trial_type')
 
     check_for_stim()
     print "Extracting frames..."
     if filename[-4:].lower() == '.txt':
-        rawFrames = extract_frames(filename)
+        raw_frames = extract_frames(filename)
     else:
-        rawFrames = extract_frames_from_csv(filename, CONFIG.get('skip-rows', 0), CONFIG.get('csv_null_values', ['', 'NULL']))
+        raw_frames = extract_frames_from_csv(filename, config.get('skip-rows', 0), config.get('csv_null_values', ['', 'NULL']))
 
     print "Converting frames..."
-    bidsRuns = raw_to_bids_runs(rawFrames)
-    outFilenames = []
-    outfilebasename = input_filename
-    print "Found {} runs".format(len(bidsRuns))
-    if conf.get('config', {}).get('FileName'):
-        outfilebasename = conf.get('config', {}).get('FileName')
-    if len(bidsRuns) > 1:
-        outFilenames = ['{}_run-{}.tsv'.format(outfilebasename[:-4], i) for i in range(len(bidsRuns))]
-    else:
-        outFilenames = ['{}.tsv'.format(outfilebasename[:-4])]
-    for i, run in enumerate(bidsRuns):
-        to_tsv(run, os.path.join(output_folder, outFilenames[i]))
-        print 'Created {}'.format(os.path.join(output_folder, outFilenames[i]))
+    bids_runs = raw_to_bids_runs(raw_frames)
+    print "Found {} runs".format(len(bids_runs))
+
+    output_filenames = get_output_filenames(input_filename, len(bids_runs), custom_filename=job_config.get('config', {}).get('Filename'))
+
+    for i, run in enumerate(bids_runs):
+        to_tsv(run, os.path.join(output_folder, output_filenames[i]))
+        print 'Created {}'.format(os.path.join(output_folder, output_filenames[i]))
