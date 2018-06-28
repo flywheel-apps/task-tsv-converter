@@ -95,7 +95,7 @@ class TaskGenTestCases(unittest.TestCase):
         }
 
     def tearDown(self):
-        task_gen.CONFIG = {}
+        task_gen.config = {}
 
     def test_extract_frames(self):
         # Test getting raw frames from log text file
@@ -121,25 +121,25 @@ class TaskGenTestCases(unittest.TestCase):
     def test_get_initial_offset(self):
         # Test getting the initial offset from different sources
         frame = copy.deepcopy(self.init_frame)
-        CONFIG = copy.deepcopy(self.config)
-        key = '{0}.OffsetTime'.format(CONFIG.get('initialScannerEvent'))
+        config = copy.deepcopy(self.config)
+        key = '{0}.OffsetTime'.format(config.get('initialScannerEvent'))
 
-        offset = task_gen.get_initial_offset(frame, key, CONFIG)
+        offset = task_gen.get_initial_offset(frame, key, config)
         self.assertEqual(offset, 25)
 
     def test_no_config_offset(self):
         # Test getting the initial offset from different sources when offset delta isn't given
         frame = copy.deepcopy(self.init_frame)
-        CONFIG = copy.deepcopy(self.config)
-        CONFIG.pop('offsetDelta')
-        key = '{0}.OffsetTime'.format(CONFIG.get('initialScannerEvent'))
+        config = copy.deepcopy(self.config)
+        config.pop('offsetDelta')
+        key = '{0}.OffsetTime'.format(config.get('initialScannerEvent'))
 
-        offset = task_gen.get_initial_offset(frame, key, CONFIG)
+        offset = task_gen.get_initial_offset(frame, key, config)
         self.assertEqual(offset, 10)
 
     def test_fix_time_for_single_event(self):
         frame = copy.deepcopy(self.event_frame)
-        CONFIG = copy.deepcopy(self.config)
+        config = copy.deepcopy(self.config)
         offset = 10
         event = "GoImage"
         timeProps = {'offset': ['OffsetTime', 'OnsetTime'],
@@ -159,8 +159,8 @@ class TaskGenTestCases(unittest.TestCase):
 
     def test_get_event(self):
         frame = copy.deepcopy(self.event_frame)
-        CONFIG = copy.deepcopy(self.config)
-        task_gen.CONFIG = CONFIG
+        config = copy.deepcopy(self.config)
+        task_gen.config = config
         trial_type = task_gen.get_event(frame, 'GoImage')
 
         self.assertEqual(trial_type, 'GoProc')
@@ -168,8 +168,8 @@ class TaskGenTestCases(unittest.TestCase):
     def test_get_duration(self):
         frame = copy.deepcopy(self.event_frame)
         frame['GoImage.Duration'] = '497'
-        CONFIG = copy.deepcopy(self.config)
-        task_gen.CONFIG = CONFIG
+        config = copy.deepcopy(self.config)
+        task_gen.config = config
         Duration = task_gen.get_duration(frame, 'GoImage')
 
         self.assertEqual(Duration, '497')
@@ -186,8 +186,8 @@ class TaskGenTestCases(unittest.TestCase):
         self.assertEqual(OnsetToNextOnsetTime, '497.0')
 
     def test_output_filenames(self):
-        CONFIG = copy.deepcopy(self.config)
-        task_gen.CONFIG = CONFIG
+        config = copy.deepcopy(self.config)
+        task_gen.config = config
 
         # Test no start_run config or custom filename
         output_filenames = task_gen.get_output_filenames('task_events.csv', 1)
@@ -205,7 +205,7 @@ class TaskGenTestCases(unittest.TestCase):
         self.assertEqual(output_filenames, ['task_events_run-0.tsv', 'task_events_run-1.tsv', 'task_events_run-2.tsv'])
 
         # Test start run with one run
-        task_gen.CONFIG['start_run'] = 2
+        task_gen.config['start_run'] = 2
         output_filenames = task_gen.get_output_filenames('task_events.csv', 1)
 
         self.assertEqual(output_filenames, ['task_events.tsv'])
