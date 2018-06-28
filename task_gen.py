@@ -22,7 +22,8 @@ import sys
 #     'onset': '{event}.OnsetTime',
 #     'next_onset': '{Extraevent}.OnsetTime', ie Fix event in Pokemon
 #     'csv_null_values': ['', 'NULL'],
-#     'null_output': 'n/a'
+#     'null_output': 'n/a',
+#     'start_run': 0,
 # }
 
 CONFIG = {}
@@ -258,7 +259,8 @@ if __name__ == '__main__':
     if conf.get('config', {}).get('FileName'):
         outfilebasename = conf.get('config', {}).get('FileName')
     if len(bidsRuns) > 1:
-        outFilenames = ['{}_run-{}.tsv'.format(outfilebasename[:-4], i) for i in range(len(bidsRuns))]
+        first_run = CONFIG.get('start_run', 0)
+        outFilenames = ['{}_run-{}.tsv'.format(outfilebasename[:-4], i) for i in range(first_run, first_run+len(bidsRuns))]
     else:
         outFilenames = ['{}.tsv'.format(outfilebasename[:-4])]
     for i, run in enumerate(bidsRuns):

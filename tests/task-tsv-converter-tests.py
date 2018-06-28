@@ -185,6 +185,35 @@ class TaskGenTestCases(unittest.TestCase):
         # Because there's subtraction involved, it returns a float
         self.assertEqual(OnsetToNextOnsetTime, '497.0')
 
+    def test_output_filenames(self):
+        CONFIG = copy.deepcopy(self.config)
+        task_gen.CONFIG = CONFIG
+
+        # Test no start_run config or custom filename
+        output_filenames = task_gen.get_output_filenames('task_events.csv', 1)
+
+        self.assertEqual(output_filenames, ['task_events.tsv'])
+
+        # Test no start_run but custom filename
+        output_filenames = task_gen.get_output_filenames('task_events.csv', 1, custom_filename='custom_name.tsv')
+
+        self.assertEqual(output_filenames, ['custom_name.tsv'])
+
+        # Test no start_run with mulitple runs
+        output_filenames = task_gen.get_output_filenames('task_events.csv', 3)
+
+        self.assertEqual(output_filenames, ['task_events_run-0.tsv', 'task_events_run-1.tsv', 'task_events_run-2.tsv'])
+
+        # Test start run with one run
+        task_gen.CONFIG['start_run'] = 2
+        output_filenames = task_gen.get_output_filenames('task_events.csv', 1)
+
+        self.assertEqual(output_filenames, ['task_events.tsv'])
+
+        # Test start run with multiple runs
+        output_filenames = task_gen.get_output_filenames('task_events.csv', 3)
+
+        self.assertEqual(output_filenames, ['task_events_run-2.tsv', 'task_events_run-3.tsv', 'task_events_run-4.tsv'])
 
 if __name__ == "__main__":
 

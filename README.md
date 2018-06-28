@@ -58,6 +58,11 @@ Schema is as follows:
 				"type": "string",
 				"description": "What value to write out when no value is present",
 				"default": "n/a"
+			},
+			"start_run": {
+				"type": "number",
+				"description": "Number to start counting run numbers from",
+				"default": 0
 			}
 		},
 		"Event_2":{...}
