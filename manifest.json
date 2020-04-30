@@ -35,7 +35,8 @@
 	"custom": {
 		"docker-image": "flywheel/task-tsv-converter:0.1.6",
 		"gear-builder": {
-			"image":"flywheel/task-tsv-converter:0.1.6"
+			"image":"flywheel/task-tsv-converter:0.1.6",
+			"category": "converter"
 		}
 	}
 }
