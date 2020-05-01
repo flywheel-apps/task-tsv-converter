@@ -30,24 +30,31 @@ config = {}
 
 # Functions to retrieve bids tsv header values for a given frame and event in that frame
 
+
 def get_item_fn(item, default):
-    '''
+    """
     Wrapper to quickly make configurable functions to get bids header values
-    '''
+    """
     def get_item(frame, event):
         if not config.get(item):
             return frame.get(default.format(event), config.get('null_output', 'n/a'))
         elif event in config[item]:
-            return frame.get(config[item].replace('{event}', '{}').format(event), config.get('null_output', 'n/a'))
+            return frame.get(
+                config[item].replace('{event}', '{}').format(event), config.get(
+                    'null_output', 'n/a'
+                )
+            )
         else:
             return frame.get(config[item], config.get('null_output', 'n/a'))
     return get_item
+
 
 get_event = get_item_fn('trial_type', 'TrialType')
 get_onset = get_item_fn('onset', '{}.OnsetTime')
 get_accuracy = get_item_fn('accuracy', '{}.ACC')
 get_response = get_item_fn('response', '{}.RESP')
 get_correct_response = get_item_fn('correct', '{}.CRESP')
+
 
 # Should duration error be add/ subtracted from duration?
 def get_duration(frame, event):
@@ -68,8 +75,10 @@ def get_duration(frame, event):
     else:
         return config.get('null_output', 'n/a')
 
+
 def get_response_time(frame, event):
     return frame.get('{0}.RT'.format(event), config.get('null_output', 'n/a'))
+
 
 def get_correct(frame, event):
     resp = get_response(frame, event)
@@ -79,26 +88,29 @@ def get_correct(frame, event):
     else:
         return config.get('null_output', 'n/a')
 
+
 def get_stim_gen(stim_prop):
-    '''
+    """
     Wrapper so that the function takes the same arguments as the other methods
-    '''
+    """
     def get_stim(frame, event):
         return frame.get(stim_prop, config.get('null_output', 'n/a'))
     return get_stim
 
+
 def check_for_stim():
-    '''
+    """
     Adds stim properties to the closure dictionary and Properties list for the header
-    '''
+    """
     if config.get('stimuli'):
         MY_PROPS['stim_file'] = get_stim_gen(config['stimuli'])
         MY_PROP_KEYS.append('stim_file')
 
+
 def extract_frames(filename):
-    '''
+    """
     Returns the list of log frames from the .txt
-    '''
+    """
     frames = []
     with open(filename) as file:
         header = {}
@@ -106,22 +118,23 @@ def extract_frames(filename):
         for line in file:
             k = line.strip().split(':')
             if not frames and len(k) > 1 and 'Level' not in k[0]:
-                header[k[0]] = string.join(k[1:], ':').strip()
+                header[k[0]] = ':'.join(k[1:]).strip()
             if 'Level: ' in line:
                 frames.append(copy.deepcopy(header))
                 frame += 1
             if len(k) > 1 and frames:
-                frames[frame][k[0]] = string.join(k[1:], ':').strip()
+                frames[frame][k[0]] = ':'.join(k[1:]).strip()
     if len(frames) < 1:
         print("No log frames found, please make sure a valid log file was given.")
     return frames
 
+
 def extract_frames_from_csv(filename, skip_rows, null_vals):
-    '''
+    """
     Returns the list of log frames from the .txt
-    '''
+    """
     frames = []
-    with open(filename, 'rb') as file:
+    with open(filename) as file:
         reader = csv.reader(file)
         for i in range(skip_rows):
             next(reader)
@@ -130,8 +143,9 @@ def extract_frames_from_csv(filename, skip_rows, null_vals):
             if len(row) > len(header):
                 print("Row is longer than header.")
                 return []
-            frames.append({header[i]:row[i] for i in range(len(row)) if row[i] not in null_vals})
+            frames.append({header[i]: row[i] for i in range(len(row)) if row[i] not in null_vals})
     return frames
+
 
 def get_initial_offset(frame, key, config):
     result = 0
@@ -141,10 +155,11 @@ def get_initial_offset(frame, key, config):
     delta = config.get('offsetDelta', 0)
     return result + delta
 
+
 def fix_time_for_single_event(frame, event, offset, time_props):
-    '''
+    """
     Use the offset to correct the time properties that need to be corrected
-    '''
+    """
     for offset_time_prop in time_props['offset']:
         key = '{0}.{1}'.format(event, offset_time_prop)
         if key in frame:
@@ -155,10 +170,11 @@ def fix_time_for_single_event(frame, event, offset, time_props):
         if key in frame:
             frame[key] = str(float(frame[key])/1000.0)
 
+
 def raw_to_bids_runs(frames):
-    '''
+    """
     converts the raw frames to runs of bids frames
-    '''
+    """
     runs = []
     run_index = -1
     offset = None
@@ -176,10 +192,18 @@ def raw_to_bids_runs(frames):
                 offset = get_initial_offset(frame, key, config)
                 fix_time_for_single_event(frame, config.get('initialScannerEvent'), offset, time_props)
             else:
-                present_events = [event for event in config['events'] if "{}.".format(event) in string.join(list(frame.keys()), '||')]
+                present_events = [
+                    event for event in config['events'] if "{}.".format(event) in '||'.join(
+                        list(frame.keys())
+                    )
+                ]
                 offset = 0
         elif offset is not None:
-            present_events = [event for event in config['events'] if "{}.".format(event) in string.join(list(frame.keys()), '||')]
+            present_events = [
+                event for event in config['events'] if "{}.".format(event) in '||'.join(
+                    list(frame.keys())
+                )
+            ]
             for event in present_events:
                 fix_time_for_single_event(frame, event, offset, time_props)
         for event in present_events:
@@ -189,15 +213,17 @@ def raw_to_bids_runs(frames):
             runs[run_index].append(bids_frame)
     return runs
 
+
 def to_tsv(bids_frames, out_file):
-    '''
+    """
     Writes the bids frames to a csv
-    '''
+    """
     with open(out_file, 'wb') as csvfile:
         writer = csv.DictWriter(csvfile, MY_PROP_KEYS, dialect=csv.excel_tab)
         writer.writeheader()
         for bids_frame in bids_frames:
             writer.writerow(bids_frame)
+
 
 def get_output_filenames(input_filename, number_of_bids_runs, custom_filename=None):
     output_filenames = []
@@ -210,6 +236,7 @@ def get_output_filenames(input_filename, number_of_bids_runs, custom_filename=No
     else:
         output_filenames = ['{}.tsv'.format(output_file_basename[:-4])]
     return output_filenames
+
 
 if __name__ == '__main__':
 

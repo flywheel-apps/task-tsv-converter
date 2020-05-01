@@ -147,7 +147,7 @@ class TaskGenTestCases(unittest.TestCase):
 
         task_gen.fix_time_for_single_event(frame, event, offset, timeProps)
 
-        for key, item in frame.iteritems():
+        for key, item in frame.items():
             e, p = key.split('.') if '.' in key else key, None
             if event == e:
                 if p in timeProps['offset']:
