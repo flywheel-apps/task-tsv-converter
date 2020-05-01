@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 
 set -eu
+unset CDPATH
 cd "$( dirname $0 )/.."
 
 
