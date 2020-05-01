@@ -113,7 +113,7 @@ def extract_frames(filename):
             if len(k) > 1 and frames:
                 frames[frame][k[0]] = string.join(k[1:], ':').strip()
     if len(frames) < 1:
-        print "No log frames found, please make sure a valid log file was given."
+        print("No log frames found, please make sure a valid log file was given.")
     return frames
 
 def extract_frames_from_csv(filename, skip_rows, null_vals):
@@ -124,11 +124,11 @@ def extract_frames_from_csv(filename, skip_rows, null_vals):
     with open(filename, 'rb') as file:
         reader = csv.reader(file)
         for i in range(skip_rows):
-            reader.next()
-        header = reader.next()
+            next(reader)
+        header = next(reader)
         for row in reader:
             if len(row) > len(header):
-                print "Row is longer than header."
+                print("Row is longer than header.")
                 return []
             frames.append({header[i]:row[i] for i in range(len(row)) if row[i] not in null_vals})
     return frames
@@ -176,15 +176,15 @@ def raw_to_bids_runs(frames):
                 offset = get_initial_offset(frame, key, config)
                 fix_time_for_single_event(frame, config.get('initialScannerEvent'), offset, time_props)
             else:
-                present_events = [event for event in config['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
+                present_events = [event for event in config['events'] if "{}.".format(event) in string.join(list(frame.keys()), '||')]
                 offset = 0
         elif offset is not None:
-            present_events = [event for event in config['events'] if "{}.".format(event) in string.join(frame.keys(), '||')]
+            present_events = [event for event in config['events'] if "{}.".format(event) in string.join(list(frame.keys()), '||')]
             for event in present_events:
                 fix_time_for_single_event(frame, event, offset, time_props)
         for event in present_events:
             bids_frame = {}
-            for bids_key, closure in MY_PROPS.items():
+            for bids_key, closure in list(MY_PROPS.items()):
                 bids_frame[bids_key] = closure(frame, event)
             runs[run_index].append(bids_frame)
     return runs
@@ -217,24 +217,24 @@ if __name__ == '__main__':
     # Gear basics
     input_folder = '/flywheel/v0/input/file/'
     output_folder = '/flywheel/v0/output/'
-    print os.listdir('/flywheel/v0/input/file/')
+    print(os.listdir('/flywheel/v0/input/file/'))
     # Grab the input file path
     input_filename = os.listdir(input_folder)[0]
     filename = os.path.join(input_folder, input_filename)
 
     CONFIG_PATH = '/flywheel/v0/config.json'
-    print "Reading configurations..."
+    print("Reading configurations...")
     configs = {}
     with open(CONFIG_PATH) as config_file:
         job_config = json.load(config_file)
     configs = job_config['inputs'].get('LogConfig', {}).get('value', {})
-    ks = configs.keys()
+    ks = list(configs.keys())
     for k in ks:
         if fnmatch.fnmatch(input_filename, "*{}*".format(k)):
             config = configs[k]
 
     if not config or not isinstance(config, dict):
-        print "Valid config not found for task {} in project.info.context.LogConfig".format(input_filename)
+        print("Valid config not found for task {} in project.info.context.LogConfig".format(input_filename))
         sys.exit(17)
 
     MY_PROP_KEYS= ['onset', 'duration', 'trial_type', 'response_time',
@@ -257,18 +257,18 @@ if __name__ == '__main__':
         MY_PROPS.pop('trial_type')
 
     check_for_stim()
-    print "Extracting frames..."
+    print("Extracting frames...")
     if filename[-4:].lower() == '.txt':
         raw_frames = extract_frames(filename)
     else:
         raw_frames = extract_frames_from_csv(filename, config.get('skip-rows', 0), config.get('csv_null_values', ['', 'NULL']))
 
-    print "Converting frames..."
+    print("Converting frames...")
     bids_runs = raw_to_bids_runs(raw_frames)
-    print "Found {} runs".format(len(bids_runs))
+    print("Found {} runs".format(len(bids_runs)))
 
     output_filenames = get_output_filenames(input_filename, len(bids_runs), custom_filename=job_config.get('config', {}).get('Filename'))
 
     for i, run in enumerate(bids_runs):
         to_tsv(run, os.path.join(output_folder, output_filenames[i]))
-        print 'Created {}'.format(os.path.join(output_folder, output_filenames[i]))
+        print('Created {}'.format(os.path.join(output_folder, output_filenames[i])))
