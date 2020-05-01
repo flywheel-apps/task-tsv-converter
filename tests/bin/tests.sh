@@ -2,7 +2,7 @@
 
 set -eu
 unset CDPATH
-cd "$( dirname $0 )/../.."
+cd "$( dirname $0 )/.."
 
 
 USAGE="
@@ -19,8 +19,9 @@ Options:
 
 
 main() {
-    export PYTHONDONTWRITEBYTECODE=1
-    export PYTHONPATH=.
+    PYTHONPATH=".."
+    ls "$PYTHONPATH"
+    export PYTHONPATH
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -43,12 +44,11 @@ main() {
         shift
     done
 
-    log "INFO: Cleaning pyc and previous coverage results ..."
-    find . -type d -name __pycache__ -exec rm -rf {} \; || true
-    find . -type f -name '*.pyc' -delete
-    rm -rf .coverage htmlcov
-
-    python -m pytest tests/unit_tests
+    RUN_UNIT=true
+    if ${RUN_UNIT}; then
+        log "INFO: Running unit tests ...\n"
+        python unit_tests/task-tsv-converter-tests.py
+    fi
 }
 
 log() {
