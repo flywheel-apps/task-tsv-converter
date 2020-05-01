@@ -9,3 +9,4 @@ ENV FLYWHEEL /flywheel/v0
 RUN mkdir -p ${FLYWHEEL}
 COPY manifest.json ${FLYWHEEL}/manifest.json
 COPY task_gen.py ${FLYWHEEL}/task_gen.py
+ADD tests ${FLYWHEEL}
