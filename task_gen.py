@@ -136,7 +136,7 @@ def extract_frames_from_csv(filename, skip_rows, null_vals):
 def get_initial_offset(frame, key, config):
     result = 0
 
-    result = int(frame[key])
+    result = float(frame[key])
 
     delta = config.get('offsetDelta', 0)
     return result + delta
@@ -148,12 +148,12 @@ def fix_time_for_single_event(frame, event, offset, time_props):
     for offset_time_prop in time_props['offset']:
         key = '{0}.{1}'.format(event, offset_time_prop)
         if key in frame:
-            frame[key] = str((int(frame[key]) - offset)/1000.0)
+            frame[key] = str((float(frame[key]) - offset)/1000.0)
 
     for non_offset_time_prop in time_props['nonOffset']:
         key = '{0}.{1}'.format(event, non_offset_time_prop)
         if key in frame:
-            frame[key] = str(int(frame[key])/1000.0)
+            frame[key] = str(float(frame[key])/1000.0)
 
 def raw_to_bids_runs(frames):
     '''
